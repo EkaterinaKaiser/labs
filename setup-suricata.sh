@@ -13,6 +13,25 @@ sudo cp suricata/rules/local.rules /etc/suricata/rules/
 # Создаём директорию для логов
 sudo mkdir -p /var/log/suricata
 
+# Загрузка модулей ядра для NFQ
+echo "Загрузка модулей ядра для NFQ"
+sudo modprobe nfnetlink || true
+sudo modprobe nfnetlink_queue || true
+
+# Проверка что модули загружены
+echo "Проверка загруженных модулей NFQ:"
+if sudo lsmod | grep -q nfnetlink_queue; then
+  echo "✓ Модуль nfnetlink_queue загружен"
+else
+  echo "⚠ Модуль nfnetlink_queue не загружен (возможны проблемы с NFQ)"
+fi
+
+# Убиваем все процессы Suricata перед запуском
+echo "Остановка существующих процессов Suricata"
+sudo pkill -x suricata || true
+sudo systemctl stop suricata 2>/dev/null || true
+sleep 1
+
 # Настройка iptables для IPS
 echo "Настройка iptables для NFQ"
 sudo iptables -I FORWARD -j NFQUEUE --queue-num 0 || true
@@ -24,25 +43,10 @@ sudo suricata -T -c /etc/suricata/suricata.yaml -l /tmp/suricata-test
 
 # Запуск Suricata
 echo "Запуск Suricata в режиме IPS (NFQ)"
-if sudo systemctl restart suricata 2>/dev/null; then
-  sudo systemctl enable suricata || true
-  echo "Suricata запущена как systemd-сервис"
-  sleep 2
-  if sudo systemctl is-active --quiet suricata; then
-    echo "Suricata успешно запущена"
-  else
-    echo "Systemd сервис не активен, запускаю напрямую"
-    sudo systemctl stop suricata 2>/dev/null || true
-    sudo pkill -x suricata || true
-    sleep 1
-    sudo suricata -c /etc/suricata/suricata.yaml -q 0 -D
-  fi
-else
-  echo "Не удалось запустить Suricata через systemd, запускаю напрямую (daemon)"
-  sudo pkill -x suricata || true
-  sleep 1
-  sudo suricata -c /etc/suricata/suricata.yaml -q 0 -D
-fi
+# Пробуем запустить напрямую в daemon режиме (systemd часто не работает с NFQ)
+echo "Запуск Suricata в daemon режиме с NFQ..."
+sudo suricata -c /etc/suricata/suricata.yaml -q 0 -D
+sleep 3
 
 # Проверка что Suricata запущена
 sleep 2
