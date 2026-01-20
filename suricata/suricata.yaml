@@ -1,0 +1,19 @@
+# suricata/suricata.yaml
+%YAML 1.1
+---
+
+nfq:
+  - queue: 0
+
+logging:
+  outputs:
+    - fast:
+        enabled: yes
+        filename: /var/log/suricata/fast.log
+    - eve-log:
+        enabled: yes
+        filename: /var/log/suricata/eve.json
+
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - local.rules
