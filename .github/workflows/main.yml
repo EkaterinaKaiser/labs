@@ -7,47 +7,46 @@ on:
     branches: [ main ]
 
 jobs:
-  test-lab:
+  deploy-cloud:
+    name: Deploy lab to cloud host
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Compose
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CLOUD_SSH_KEY }}
+
+      - name: Add cloud host to known_hosts
         run: |
-          docker compose version
-          docker version
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.CLOUD_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Start lab environment
-        run: docker-compose up -d
-
-      - name: Wait for victim HTTP server
+      - name: Deploy to cloud host
+        env:
+          CLOUD_HOST: ${{ secrets.CLOUD_HOST }}
+          CLOUD_USER: ${{ secrets.CLOUD_USER }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          for i in {1..10}; do
-            if docker exec victim wget -q -O- http://localhost:80 | grep -q "Welcome"; then
-              echo "Victim HTTP server is ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Victim did not start in time"
-          exit 1
+          set -e
+          REMOTE_DIR="labs"
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}.git"
 
-      - name: Test HTTP from attacker
-        run: |
-          docker exec attacker curl -s http://172.20.0.2 | head -1
-
-      - name: Install Suricata (for config validation)
-        run: sudo apt-get update && sudo apt-get install -y suricata
-
-      - name: Validate Suricata rules
-        run: |
-          suricata -T -c suricata/suricata.yaml -l /tmp/suricata-test
-
-      - name: Show Suricata test log (if failed)
-        if: failure()
-        run: cat /tmp/suricata-test/suricata.log || true
-
-      - name: Shutdown
-        run: docker-compose down
+          ssh "${CLOUD_USER}@${CLOUD_HOST}" bash -s << EOF
+          set -e
+          if [ ! -d "$REMOTE_DIR" ]; then
+            git clone "$REPO_URL" "$REMOTE_DIR"
+          else
+            cd "$REMOTE_DIR"
+            git fetch origin
+            git reset --hard origin/main
+          fi
+          cd "$REMOTE_DIR"
+          chmod +x setup-suricata.sh
+          sudo ./setup-suricata.sh
+          docker compose pull || true
+          docker compose up -d
+          EOF
