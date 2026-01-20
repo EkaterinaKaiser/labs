@@ -2,8 +2,13 @@
 %YAML 1.1
 ---
 
+# Режим NFQ для IPS
 nfq:
   - queue: 0
+    mode: accept
+
+# Отключаем af-packet для NFQ режима
+af-packet:
 
 logging:
   outputs:

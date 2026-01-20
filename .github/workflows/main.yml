@@ -87,12 +87,24 @@ jobs:
           docker compose pull || true
           docker compose up -d
 
+          echo "Ожидание готовности контейнеров..."
+          sleep 10
+          for i in {1..30}; do
+            if docker exec attacker ping -c 1 -W 1 victim >/dev/null 2>&1 || docker exec attacker curl -s http://victim >/dev/null 2>&1; then
+              echo "Контейнеры готовы"
+              break
+            fi
+            echo "Ожидание... ($i/30)"
+            sleep 2
+          done
+
           echo "===== Проверка работы Suricata IPS ====="
           echo "Ping victim из attacker (ожидаем, что ICMP будет блокироваться Suricata)"
-          docker exec attacker ping -c 4 victim || true
+          docker exec attacker ping -c 4 -W 2 victim 2>&1 || echo "Ping заблокирован (ожидаемое поведение)"
 
+          echo ""
           echo "HTTP-запрос с attacker на victim (ожидаем 200 OK)"
-          docker exec attacker curl -s -o /dev/null -w "HTTP code: %{http_code}\n" http://victim || true
+          docker exec attacker curl -s -o /dev/null -w "HTTP code: %{http_code}\n" http://victim || echo "HTTP запрос не выполнен"
 
           echo "Последние события Suricata из eve.json"
           if command -v jq >/dev/null 2>&1; then
