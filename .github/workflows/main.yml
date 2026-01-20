@@ -37,6 +37,19 @@ jobs:
 
           ssh "${CLOUD_USER}@${CLOUD_HOST}" bash -s << EOF
           set -e
+          # Установка git, если не установлен
+          if ! command -v git &> /dev/null; then
+            if command -v apt-get &> /dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq git
+            elif command -v yum &> /dev/null; then
+              sudo yum install -y -q git
+            else
+              echo "Не удалось определить пакетный менеджер для установки git"
+              exit 1
+            fi
+          fi
+          
           if [ ! -d "$REMOTE_DIR" ]; then
             git clone "$REPO_URL" "$REMOTE_DIR"
           else
