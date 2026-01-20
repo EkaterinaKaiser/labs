@@ -10,6 +10,9 @@ sudo cp suricata/suricata.yaml /etc/suricata/suricata.yaml
 sudo mkdir -p /etc/suricata/rules
 sudo cp suricata/rules/local.rules /etc/suricata/rules/
 
+# Создаём директорию для логов
+sudo mkdir -p /var/log/suricata
+
 # Настройка iptables для IPS
 echo "Настройка iptables для NFQ"
 sudo iptables -I FORWARD -j NFQUEUE --queue-num 0 || true

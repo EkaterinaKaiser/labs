@@ -7,12 +7,26 @@ nfq:
 
 logging:
   outputs:
-    - fast:
+    - file:
         enabled: yes
         filename: /var/log/suricata/fast.log
-    - eve-log:
+        format:
+          - "[%i] %t - <%d> (%n) -- "
+          - "%z "
+          - "%C "
+          - "%r"
+    - file:
         enabled: yes
         filename: /var/log/suricata/eve.json
+        type: json
+        types:
+          - alert
+          - http
+          - dns
+          - tls
+          - ssh
+          - stats
+          - flow
 
 default-rule-path: /etc/suricata/rules
 rule-files:
