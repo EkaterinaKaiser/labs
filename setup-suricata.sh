@@ -68,8 +68,15 @@ sleep 1
 
 # Теперь запускаем в daemon режиме
 echo "Запуск Suricata в daemon режиме..."
-sudo suricata -c /etc/suricata/suricata.yaml -q 0 -D
-sleep 5
+if sudo suricata -c /etc/suricata/suricata.yaml -q 0 -D; then
+  echo "Suricata запущена в daemon режиме"
+else
+  echo "⚠ Ошибка при запуске Suricata в daemon режиме, пробуем без -D..."
+  # Пробуем запустить в фоне через nohup
+  sudo nohup suricata -c /etc/suricata/suricata.yaml -q 0 > /var/log/suricata/startup.log 2>&1 &
+  sleep 2
+fi
+sleep 3
 
 # Проверка что Suricata запущена
 if pgrep -x suricata > /dev/null; then
