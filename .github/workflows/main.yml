@@ -50,14 +50,17 @@ jobs:
             fi
           fi
           
-          if [ ! -d "$REMOTE_DIR" ]; then
-            git clone "$REPO_URL" "$REMOTE_DIR"
+          # Переходим в домашнюю директорию и используем абсолютный путь
+          cd ~
+          REMOTE_DIR_FULL="\$HOME/$REMOTE_DIR"
+          if [ ! -d "\$REMOTE_DIR_FULL" ]; then
+            git clone "$REPO_URL" "\$REMOTE_DIR_FULL"
+            cd "\$REMOTE_DIR_FULL"
           else
-            cd "$REMOTE_DIR"
+            cd "\$REMOTE_DIR_FULL"
             git fetch origin
             git reset --hard origin/main
           fi
-          cd "$REMOTE_DIR"
           chmod +x setup-suricata.sh
           sudo ./setup-suricata.sh
           docker compose pull || true
