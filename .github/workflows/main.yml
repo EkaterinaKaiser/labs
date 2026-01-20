@@ -86,4 +86,18 @@ jobs:
           sudo ./setup-suricata.sh
           docker compose pull || true
           docker compose up -d
+
+          echo "===== Проверка работы Suricata IPS ====="
+          echo "Ping victim из attacker (ожидаем, что ICMP будет блокироваться Suricata)"
+          docker exec attacker ping -c 4 victim || true
+
+          echo "HTTP-запрос с attacker на victim (ожидаем 200 OK)"
+          docker exec attacker curl -s -o /dev/null -w "HTTP code: %{http_code}\n" http://victim || true
+
+          echo "Последние события Suricata из eve.json"
+          if command -v jq >/dev/null 2>&1; then
+            sudo tail -n 30 /var/log/suricata/eve.json | jq '.'
+          else
+            sudo tail -n 30 /var/log/suricata/eve.json || true
+          fi
           EOF
