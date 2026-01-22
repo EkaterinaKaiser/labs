@@ -25,11 +25,11 @@ sudo mkdir -p /etc/suricata/rules
 sudo mkdir -p /var/log/suricata
 
 # Копирование suricata.yaml (должен быть скопирован из проекта)
-if [ ! -f /tmp/suricata.yaml ]; then
-    echo "Ошибка: файл /tmp/suricata.yaml не найден"
+if [ ! -f suricata.yaml ]; then
+    echo "Ошибка: файл suricata.yaml не найден"
     exit 1
 fi
-sudo cp /tmp/suricata.yaml /etc/suricata/suricata.yaml
+sudo cp suricata.yaml /etc/suricata/suricata.yaml
 
 # Создание правил Suricata
 cat > /etc/suricata/rules/local.rules <<'EORULES'
