@@ -18,7 +18,7 @@ jobs:
 
       - name: Stop containers
         run: |
-          ssh -o StrictHostKeyChecking=no "$HOST" 'docker compose -f docker-compose.yml down -v --remove-orphans || true'
+          ssh -o StrictHostKeyChecking=no "$HOST" 'docker-compose -f docker-compose.yml down -v --remove-orphans || true'
 
       - name: Copy files
         run: |
@@ -31,7 +31,7 @@ jobs:
 
       - name: Start containers
         run: |
-          ssh -o StrictHostKeyChecking=no "$HOST" 'docker compose -f docker-compose.yml up -d'
+          ssh -o StrictHostKeyChecking=no "$HOST" 'docker-compose -f docker-compose.yml up -d'
 
       - name: Test Suricata
         run: |
