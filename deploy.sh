@@ -24,18 +24,40 @@ sudo apt install -y suricata
 sudo mkdir -p /etc/suricata/rules
 sudo mkdir -p /var/log/suricata
 
-# Копирование suricata.yaml (должен быть скопирован из проекта)
-if [ ! -f suricata.yaml ]; then
-    echo "Ошибка: файл suricata.yaml не найден"
+# Копирование suricata.yaml
+SURICATA_CONFIG=""
+if [ -f suricata/suricata.yaml ]; then
+    SURICATA_CONFIG="suricata/suricata.yaml"
+elif [ -f suricata.yaml ]; then
+    SURICATA_CONFIG="suricata.yaml"
+else
+    echo "Ошибка: файл suricata.yaml не найден (проверены пути: suricata/suricata.yaml и suricata.yaml)"
     exit 1
 fi
-sudo cp suricata.yaml /etc/suricata/suricata.yaml
+sudo cp "$SURICATA_CONFIG" /etc/suricata/suricata.yaml
 
 # Создание правил Suricata
 cat > /etc/suricata/rules/local.rules <<'EORULES'
 drop icmp any any -> any any (msg:"[IPS] BLOCK ICMP"; sid:1000007; rev:1;)
 
 alert http any any -> any any (msg:"[IDS] HTTP Request Detected"; sid:100002; rev:1; flow:to_server; classtype:policy-violation;)
+
+# Пример сигнатуры scan SYN (nmap -sS)
+drop tcp any any -> any any (flags:S; msg:"[IPS] NMAP SYN Scan Blocked"; threshold: type both, track by_src, count 10, seconds 6; sid:1001001; rev:1;)
+# Пример детектирования Xmas scan (nmap -sX)
+alert tcp any any -> any any (flags:FPU; msg:"[IDS] NMAP XMAS Scan Detected"; threshold: type both, track by_src, count 5, seconds 6; sid:1001002; rev:1;)
+# Пример блокировки UDP scan 
+drop udp any any -> any any (msg:"[IPS] NMAP UDP Scan Blocked"; threshold: type both, track by_src, count 10, seconds 10; sid:1001003; rev:1;)
+# Пример детектирования OS-фингерпринтинга (nmap -O)
+alert ip any any -> any any (msg:"[IDS] Possible OS Fingerprinting Attempt"; ipopts: any; threshold: type both, track by_src, count 5, seconds 20; sid:1001101; rev:1;)
+
+# ACK scan (nmap -sA)
+alert tcp any any -> any any (flags:A; msg:"[IDS] NMAP ACK Scan Detected"; threshold: type both, track by_src, count 5, seconds 10; sid:1001004; rev:1;)
+# Фин-флаг портсканирование (nmap -sF)
+alert tcp any any -> any any (flags:F; msg:"[IDS] NMAP FIN Scan Detected"; threshold: type both, track by_src, count 3, seconds 10; sid:1001005; rev:1;)
+# Null scan (nmap -sN)
+alert tcp any any -> any any (flags:0; msg:"[IDS] NMAP NULL Scan Detected"; threshold: type both, track by_src, count 2, seconds 10; sid:1001006; rev:1;)
+
 EORULES
 
 # NFQUEUE for Docker traffic
@@ -57,3 +79,14 @@ systemctl daemon-reload
 systemctl enable suricata
 systemctl restart suricata
 systemctl status suricata --no-pager
+
+# Установка EveCtl (опционально, для управления EveBox)
+mkdir -p ~/evectl
+cd ~/evectl
+if curl -sSf https://evebox.org/evectl.sh | sh; then
+    echo "EveCtl успешно установлен"
+    # Запуск интерактивной настройки (можно закомментировать для автоматического деплоя)
+    # ./evectl
+else
+    echo "Предупреждение: не удалось установить EveCtl"
+fi
