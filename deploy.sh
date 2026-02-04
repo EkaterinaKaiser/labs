@@ -79,14 +79,3 @@ systemctl daemon-reload
 systemctl enable suricata
 systemctl restart suricata
 systemctl status suricata --no-pager
-
-# Установка EveCtl (опционально, для управления EveBox)
-mkdir -p ~/evectl
-cd ~/evectl
-if curl -sSf https://evebox.org/evectl.sh | sh; then
-    echo "EveCtl успешно установлен"
-    # Запуск интерактивной настройки (можно закомментировать для автоматического деплоя)
-    # ./evectl
-else
-    echo "Предупреждение: не удалось установить EveCtl"
-fi
